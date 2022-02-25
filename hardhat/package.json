@@ -19,6 +19,7 @@
     "solidity-coverage": "^0.7.20"
   },
   "dependencies": {
+    "@nomiclabs/hardhat-ganache": "^2.0.1",
     "@openzeppelin/contracts": "^4.5.0"
   }
 }

@@ -1,62 +1,94 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const { expect } = require('chai')
+const { ethers } = require('hardhat')
 
-describe("SimpleBank", function () {
+describe('SimpleBank', function () {
   beforeEach(async () => {
-    SimpleToken = await ethers.getContractFactory("SimpleToken");
-    account = await ethers.getSigner();
-    simpleToken = await SimpleToken.deploy(ethers.constants.MaxUint256);
+    SimpleToken = await ethers.getContractFactory('SimpleToken')
+    const totalSupply = ethers.constants.MaxUint256
+    simpleToken = await SimpleToken.deploy(totalSupply)
+
+    SimpleBank = await ethers.getContractFactory('SimpleBank')
+    simpleBank = await SimpleBank.deploy(simpleToken.address)
+
+    account = await ethers.getSigner()
+
+    amount = ethers.utils.parseEther('1')
+    await simpleToken.approve(simpleBank.address, ethers.constants.MaxUint256)
   })
 
-  it("Deployment should assign the total balance to the SimpleBank", async function () {
+  it('Should deposit balance successfully', async function () {
     // when
-    const SimpleBank = await ethers.getContractFactory("SimpleBank");
-    const initialBalance = ethers.utils.parseEther("100")
-    // action
-    const simpleBank = await SimpleBank.deploy({ value: initialBalance });
-    // assert
-    expect(await simpleBank.total()).to.equal(ethers.utils.parseEther("100"));
-  });
-
-  it("Should deposit balance successfully and return the deposited balance of the caller", async function () {
-    // when
-    const SimpleBank = await ethers.getContractFactory("SimpleBank");
-    const simpleBank = await SimpleBank.deploy();
     expect(await simpleBank.balance()).to.equal(0)
+    expect(await simpleBank.total()).to.equal(0)
     // action
-    simpleBank.deposit({ value: ethers.utils.parseEther("100") })
+    await simpleBank.deposit(amount)
     // assert
-    expect(await simpleBank.balance()).to.equal(ethers.utils.parseEther("100"))
+    expect(await simpleBank.balance()).to.equal(amount)
+    expect(await simpleBank.total()).to.equal(amount)
   })
 
-  it("Should withdraw balance successfully and return the deposited balance of the caller", async function () {
+  it('Should withdraw balance successfully', async function () {
     // when
-    const SimpleBank = await ethers.getContractFactory("SimpleBank");
-    const simpleBank = await SimpleBank.deploy();
     expect(await simpleBank.balance()).to.equal(0)
-    simpleBank.deposit({ value: ethers.utils.parseEther("100") })
-    expect(await simpleBank.balance()).to.equal(ethers.utils.parseEther("100"))
+    expect(await simpleBank.total()).to.equal(0)
+    await simpleBank.deposit(amount)
+    expect(await simpleBank.balance()).to.equal(amount)
+    expect(await simpleBank.total()).to.equal(amount)
     // action
-    simpleBank.withdraw(ethers.utils.parseEther("50"))
+    const withdrawAmount = ethers.utils.parseEther('0.5')
+    await simpleBank.withdraw(withdrawAmount)
     // assert
-    expect(await simpleBank.balance()).to.equal(ethers.utils.parseEther("50"))
+    const remainingBalance = amount.sub(withdrawAmount)
+    const remainingTotalBalance = amount.sub(withdrawAmount)
+    expect(await simpleBank.balance()).to.equal(remainingBalance)
+    expect(await simpleBank.total()).to.equal(remainingTotalBalance)
   })
 
-  it("Should transfer balance successfully and return the deposited balance of the caller and the recipient", async function () {
+  it('Should transfer balance successfully', async function () {
     // when
-    const SimpleBank = await ethers.getContractFactory("SimpleBank");
-    const simpleBank = await SimpleBank.deploy();
-    const accounts = await ethers.getSigners();
+    const accounts = await ethers.getSigners()
+    /* account #0 */
     expect(await simpleBank.balance()).to.equal(0)
+    expect(await simpleBank.total()).to.equal(0)
+    await simpleBank.deposit(amount)
+    expect(await simpleBank.balance()).to.equal(amount)
+    expect(await simpleBank.total()).to.equal(amount)
+    /* account #1 */
     expect(await simpleBank.connect(accounts[1]).balance()).to.equal(0)
-    simpleBank.deposit({ value: ethers.utils.parseEther("100") })
-    simpleBank.connect(accounts[1]).deposit({ value: ethers.utils.parseEther("100") })
-    expect(await simpleBank.balance()).to.equal(ethers.utils.parseEther("100"))
-    expect(await simpleBank.connect(accounts[1]).balance()).to.equal(ethers.utils.parseEther("100"))
+    await simpleToken
+      .connect(accounts[1])
+      .approve(simpleBank.address, ethers.constants.MaxUint256)
+    await simpleToken.transfer(accounts[1].address, amount)
+    await simpleBank.connect(accounts[1]).deposit(amount)
+    expect(await simpleBank.connect(accounts[1]).balance()).to.equal(amount)
+    expect(await simpleBank.total()).to.equal(amount.add(amount))
     // action
-    simpleBank.transfer(accounts[1].address, ethers.utils.parseEther("50"))
+    const transferAmount = ethers.utils.parseEther('0.5')
+    await simpleBank.transfer(accounts[1].address, transferAmount)
     // assert
-    expect(await simpleBank.balance()).to.equal(ethers.utils.parseEther("50"))
-    expect(await simpleBank.connect(accounts[1]).balance()).to.equal(ethers.utils.parseEther("150"))
+    expect(await simpleBank.balance()).to.equal(amount.sub(transferAmount))
+    expect(await simpleBank.connect(accounts[1]).balance()).to.equal(
+      amount.add(transferAmount)
+    )
+    expect(await simpleBank.total()).to.equal(amount.add(amount))
   })
-});
+
+  it('Should get balance and total balance in SimpleBank successfully', async () => {
+    // when
+    const accounts = await ethers.getSigners()
+    await simpleToken
+      .connect(accounts[1])
+      .approve(simpleBank.address, ethers.constants.MaxUint256)
+    await simpleToken.transfer(accounts[1].address, amount)
+    expect(await simpleBank.connect(accounts[1]).balance()).to.equal(0)
+    expect(await simpleBank.balance()).to.equal(0)
+    expect(await simpleBank.total()).to.equal(0)
+    // action
+    await simpleBank.deposit(amount)
+    await simpleBank.connect(accounts[1]).deposit(amount)
+    // assert
+    expect(await simpleBank.balance()).to.equal(amount)
+    expect(await simpleBank.connect(accounts[1]).balance()).to.equal(amount)
+    expect(await simpleBank.total()).to.equal(amount.add(amount))
+  })
+})
