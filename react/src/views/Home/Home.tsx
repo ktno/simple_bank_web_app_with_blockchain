@@ -100,8 +100,6 @@ const Main = ({
   const totalValue = useMemo(() => new BigNumber(total || 0).toFixed(), [total])
   const [depositAmount, setDepositAmount] = useState()
   const [withdrawAmount, setWithdrawAmount] = useState()
-  const [transferTo, setTransferTo] = useState<string>()
-  const [transferAmount, setTransferAmount] = useState<string>()
 
   const contract = useContract('simpleBank')
   const dispatch = useAppDispatch()
