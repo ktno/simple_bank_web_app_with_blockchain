@@ -10,6 +10,10 @@ export const useIsLoggedIn = () => {
   return useSelector((state: State) => state.profile.isLoggedIn)
 }
 
-export const useAccount = () => {
-  return useSelector((state: State) => state.profile.account)
+export const useProfile = () => {
+  return useSelector((state: State) => state.profile)
+}
+
+export const useBank = () => {
+  return useSelector((state: State) => state.bank)
 }
